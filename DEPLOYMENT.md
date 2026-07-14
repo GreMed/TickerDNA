@@ -59,6 +59,22 @@ https://github.com/GreMed/TickerDNA
 
 > 不得把真实 Secrets 写入代码或提交到 GitHub 仓库。
 
+#### 可直接粘贴的 Secrets TOML
+
+在 Streamlit Community Cloud 创建应用时，进入 **Advanced Settings → Secrets**，将以下内容直接粘贴进去（替换邮箱后再保存）：
+
+```toml
+SEC_USER_AGENT = "TickerDNA your-email@example.com"
+FM_DATA_CACHE_DIR = "/tmp/tickerdna_cache"
+# OPENAI_API_KEY = "填写真实密钥，仅在需要时启用"
+```
+
+**重要提醒：**
+
+- 必须把 `your-email@example.com` 换成自己的真实联系邮箱（SEC EDGAR 要求 User-Agent 中包含可联系邮箱）；
+- 不要把真实密钥提交到 GitHub 仓库，仅在 Streamlit Cloud Secrets 中填写；
+- `OPENAI_API_KEY` 当前是可选项，仅在需要启用辅助分析时取消注释并填入真实密钥。
+
 ### 部署步骤
 
 1. 推送源码到 GitHub `main` 分支
@@ -153,6 +169,16 @@ streamlit run app.py --server.port 8526 --server.headless true
 ```
 
 访问地址：http://localhost:8526
+
+## 部署后验收清单
+
+完成上述部署后，按以下清单逐项验证：
+
+1. **Streamlit 真实地址返回成功** — 浏览器打开 Streamlit Cloud 分配的 `https://<真实子域名>.streamlit.app`，页面正常加载，不报错。
+2. **AAPL 和 0700.HK 两个案例可以进入核心流程** — 在应用中选择 Apple（AAPL）和腾讯控股（0700.HK）两个内置示范案例，均能完成"公司与项目 → 业务拆分与基期数据 → 假设与驱动因子 → 预测与情景"主流程。
+3. **Vercel CTA 实际打开该 Streamlit 地址** — 访问 Vercel 入口页，点击"开始体验 TickerDNA"按钮，浏览器实际跳转到上一步验证通过的 Streamlit 真实地址。
+
+> 任一项目不通过，请先排查对应平台的配置，确认无误后再发布对外宣传地址。
 
 ## 版本信息
 
