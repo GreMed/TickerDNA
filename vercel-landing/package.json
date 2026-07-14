@@ -4,6 +4,6 @@
   "private": true,
   "scripts": {
     "build": "node build.js",
-    "dev": "node build.js && npx serve ."
+    "dev": "node build.js && npx serve dist"
   }
 }
