@@ -1,0 +1,12 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.cache/
+*.pyc
+*.log
+
+# Vercel landing build artifacts (built by Vercel, not committed)
+vercel-landing/dist/
+vercel-landing/index.built.html
+vercel-landing/node_modules/

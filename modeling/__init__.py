@@ -1,0 +1,2 @@
+"""Core financial modeling package."""
+
