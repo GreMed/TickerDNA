@@ -676,21 +676,24 @@ def _render_single_logic_card(layer: dict, years: list[int]) -> None:
 def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
     """假设编辑主函数（从原 app.py 迁移，保持业务逻辑不变）。"""
     version = st.session_state.get("assumption_version", 0)
-    from ui_pages.theme import render_page_header
+    from ui_pages.theme import render_page_header, render_section_header
     render_page_header("Step 3", "假设与驱动因子", "基于历史事实和已确认资料，形成可解释的 Base 假设。")
 
-    st.info(
-        "📊 **假设层级说明**\n"
-        "- **基期实际数据**：来自公司披露或模型估算，已在上一页确认，表格中标注为"
-        "「公司披露」「按公司合计反推」「模型估算」\n"
-        "- **模型初始假设**：系统根据行业特征生成的默认预测假设（如收入增长率 10%、毛利率 45%）\n"
-        "- **用户修改假设**：您在下方表格中编辑后的值，会自动标注为「用户定义」，"
-        "后续预测结果将据此更新，**不等同于公司披露**"
+    st.markdown(
+        '<div class="td-note-line">'
+        '<strong>编辑顺序</strong>　先确认基期锚点，再设置逐年 Base 假设，'
+        '最后用统一振幅生成 Bull / Bear。比例填写 15 代表 15%。'
+        '</div>',
+        unsafe_allow_html=True,
     )
-    st.caption(
-        "先逐年设置 Base 收入增长率和毛利率，再用统一振幅自动生成 Bull/Bear。"
-        "比例填写 15 代表 15%。"
-    )
+    with st.expander("查看假设性质与使用规则", expanded=False):
+        st.markdown(
+            "- **基期实际数据**：来自公司披露或模型估算，已在上一页确认，表格中标注为"
+            "「公司披露」「按公司合计反推」「模型估算」\n"
+            "- **模型初始假设**：系统根据现有资料生成的默认预测假设\n"
+            "- **用户修改假设**：您编辑后的值会自动标注为「用户定义」，"
+            "后续预测结果将据此更新，**不等同于公司披露**"
+        )
 
     def number(value: object, default: float = 0.0) -> float:
         return default if pd.isna(value) else float(value)
@@ -752,7 +755,10 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
             }
         )
 
-    st.markdown("**基期分部收入与毛利率**")
+    render_section_header(
+        "基期分部收入与毛利率",
+        "这是预测起点；可在进入逐年预测前校正分部收入和毛利率。",
+    )
     edited = st.data_editor(
         pd.DataFrame(segment_rows),
         num_rows="dynamic",
@@ -845,7 +851,10 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
     editor_key_prefix = f"{symbol}_{version}"
 
     # 逐年度 Base 收入增长率
-    st.markdown("**Base 收入增长率**")
+    render_section_header(
+        "Base 收入增长率",
+        "按业务分部逐年填写；系统不会静默截断您输入的有限数值。",
+    )
     # Phase 12B-2 收口：允许任意有限输入，不设旧的 -80%～200% 硬边界，
     # 不做静默截断；非常规输入仅显示警告，系统仍按原值计算。
     import math as _math
@@ -904,7 +913,10 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
                 annual_user_edited.add((seg_name, year))
 
     # 逐年度 Base 毛利率
-    st.markdown("**Base 毛利率**")
+    render_section_header(
+        "Base 毛利率",
+        "按业务分部逐年填写，数值将直接进入 Base 情景计算。",
+    )
     for segment in assumptions["segments"]:
         seg_name = segment["name"]
         yearly = segment.get("yearly_assumptions", {})
@@ -997,7 +1009,10 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
     sync_rationale_values(assumptions)
 
     # ── Phase 12B-2：情景振幅移至 Base 假设之后 ──────────────
-    st.markdown("**情景振幅**")
+    render_section_header(
+        "情景振幅",
+        "Bull / Bear 分别在 Base 基础上加减统一的增长率与毛利率振幅。",
+    )
     spread_col1, spread_col2 = st.columns(2)
     with spread_col1:
         growth_spread = st.number_input(
@@ -1077,14 +1092,10 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
             },
         )
 
-    _show_rationale_panel(assumptions, years)
-
-    _show_forecast_logic_cards(assumptions, years)
-
-    st.markdown("**经营费用率与其他损益率假设**")
-    st.caption(
+    render_section_header(
+        "经营费用率与其他损益率",
         "这两项不参与 Bull / Base / Bear 情景映射，三种情景在同一年度共用"
-        "相同假设。快捷设置按基期逐年线性变化，0 表示保持不变。"
+        "相同假设；快捷设置按基期逐年线性变化，0 表示保持不变。",
     )
     with st.expander("📖 了解这些指标如何影响净利润"):
         st.markdown(
@@ -1237,6 +1248,13 @@ def _assumption_editor(assumptions: dict, years: list[int]) -> dict:
         )
         / 100
     )
+
+    render_section_header(
+        "依据与预测逻辑",
+        "需要复核时再展开查看，不影响上方已经完成的假设编辑。",
+    )
+    _show_rationale_panel(assumptions, years)
+    _show_forecast_logic_cards(assumptions, years)
 
     input_warnings = validate_assumptions(assumptions, years)
     if input_warnings:

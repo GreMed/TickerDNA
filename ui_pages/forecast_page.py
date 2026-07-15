@@ -89,14 +89,37 @@ def render_forecast_page(years: list[int]) -> None:
         else 0
     )
 
-    # Base 情景关键指标（紧凑单行，不占用过多垂直空间）
-    from ui_pages.theme import info_ai_estimate
+    # Base 情景关键指标：卡片用于扫读，原摘要行继续保留为完整语义证据。
+    from ui_pages.theme import (
+        info_ai_estimate,
+        render_section_header,
+    )
+    render_section_header(
+        "Base 情景概览",
+        "首个预测年度与完整预测期的四项核心结果。",
+    )
+    summary_cols = st.columns(4)
+    summary_cols[0].metric(
+        f"FY{int(first['年度'])}E 收入",
+        f"{first['收入']:,.0f}",
+    )
+    summary_cols[1].metric(
+        f"FY{int(first['年度'])}E 毛利率",
+        f"{first['毛利率']:.1%}",
+    )
+    summary_cols[2].metric(
+        f"FY{int(first['年度'])}E 净利润",
+        f"{first['净利润']:,.0f}",
+    )
+    summary_cols[3].metric("预测期收入 CAGR", f"{cagr:.1%}")
     st.markdown(
-        f"**Base 摘要**：{int(first['年度'])}年收入 {first['收入']:,.0f}"
+        '<div class="td-note-line">'
+        f"<strong>Base 摘要：</strong>{int(first['年度'])}年收入 {first['收入']:,.0f}"
         f" ｜ 毛利率 {first['毛利率']:.1%}"
         f" ｜ 净利润 {first['净利润']:,.0f}"
         f" ｜ CAGR {cagr:.1%}"
-        f"  ｜ 预测数据 {info_ai_estimate('不等同于公司披露')}",
+        f" ｜ 预测数据 {info_ai_estimate('不等同于公司披露')}"
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -115,6 +138,10 @@ def render_forecast_page(years: list[int]) -> None:
     # Tab 1：情景对比（图表 + 财务报表式对比表）
     # ════════════════════════════════════════════════════════
     with tab_comparison:
+        render_section_header(
+            "情景走势",
+            "Base 为主结论；Bull 与 Bear 用于观察上下行区间。",
+        )
         # 图表指标选择器放在图表上方，独占整行
         chart_metric = st.radio(
             "图表指标",
@@ -244,18 +271,35 @@ def render_forecast_page(years: list[int]) -> None:
                 ],
             )
             .properties(
-                height=450,
+                height=410,
                 title=alt.TitleParams(
                     text=chart_title,
                     anchor="middle",
                     fontSize=14,
                 ),
             )
+            .configure_view(stroke=None)
+            .configure_axis(
+                labelColor="#667085",
+                titleColor="#475467",
+                gridColor="#e8edf4",
+                domainColor="#d8dee8",
+                labelFontSize=11,
+                titleFontSize=12,
+            )
+            .configure_legend(
+                labelColor="#475467",
+                titleColor="#667085",
+                orient="bottom",
+            )
         )
         st.altair_chart(chart, use_container_width=True)
 
         # ── 情景对比表（财务报表式：指标为行、年度为列）──
-        st.markdown("### 情景对比表")
+        render_section_header(
+            "情景对比表",
+            "指标为行、年度为列，便于横向比较三种情景。",
+        )
 
         comparison_stmt = build_scenario_comparison_statement(
             assumptions, forecasts, years,
@@ -289,7 +333,10 @@ def render_forecast_page(years: list[int]) -> None:
             horizontal=True,
         )
 
-        st.markdown(f"### {detail_scenario} 情景明细")
+        render_section_header(
+            f"{detail_scenario} 情景明细",
+            "从分部收入到公司利润，按财务报表阅读顺序展示。",
+        )
 
         detail_stmt = build_scenario_detail_statement(
             assumptions, forecasts, detail_scenario, years,

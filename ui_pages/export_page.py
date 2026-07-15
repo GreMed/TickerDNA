@@ -4,6 +4,7 @@
 """
 from __future__ import annotations
 
+import html
 import logging
 
 import streamlit as st
@@ -53,6 +54,22 @@ def render_export_page(years: list[int]) -> None:
         if st.button("重新检查并导出", key="retry_export_check"):
             st.rerun()
     else:
+        company_name = html.escape(str(assumptions.get("company_name") or assumptions.get("name") or "当前公司"))
+        symbol = html.escape(str(assumptions.get("symbol") or assumptions.get("ticker") or "—"))
+        fiscal_year = html.escape(str(assumptions.get("fiscal_year") or "—"))
+        forecast_range = (
+            f"FY{years[0]}E–FY{years[-1]}E" if years else "未确定"
+        )
+        st.markdown(
+            '<div class="td-delivery-card">'
+            '<div class="td-delivery-title">Excel 模型已准备好</div>'
+            '<div class="td-delivery-desc">'
+            f'{company_name}（{symbol}） · 基期 FY{fiscal_year} · '
+            f'预测期 {forecast_range} · 7 个工作表'
+            '</div>'
+            '</div>',
+            unsafe_allow_html=True,
+        )
         excel_bytes, export_error, _ = perform_export(assumptions, forecasts, summary)
         if export_error:
             st.error(export_error)
@@ -72,25 +89,25 @@ def render_export_page(years: list[int]) -> None:
             if st.button("重试导出", key="retry_export_invalid"):
                 st.rerun()
 
-    # Sheet 说明
+    # Sheet 说明默认折叠，避免抢过下载主任务。
     st.divider()
-    st.subheader("Excel 工作表说明")
-    st.markdown(
-        "**工作表顺序**（共 7 个 Sheet）：\n"
-        "1. **基期实际**：公司合计指标、分部基期数据、来源类型、披露数据源、数据质量\n"
-        "2. **假设**：基期收入（蓝色可编辑）、Base 增长率、Base 毛利率、Bull/Bear 公式、费用率、税率\n"
-        "3. **假设依据**：每个 Base 假设的来源、预测方法、置信度、驱动因子类型、占位标记\n"
-        "4. **预测汇总**：Bull/Base/Bear 三情景的收入、毛利、毛利率、净利润、净利率\n"
-        "5. **Bull**：Bull 情景分部收入、毛利明细\n"
-        "6. **Base**：Base 情景分部收入、毛利明细\n"
-        "7. **Bear**：Bear 情景分部收入、毛利明细\n"
-        "\n"
-        "**颜色约定**：\n"
-        "- 蓝色字体：模型输入（可编辑）\n"
-        "- 黑色字体：公式计算结果\n"
-        "\n"
-        "**图表**：包含 Bull/Base/Bear 三情景收入趋势图。"
-    )
+    with st.expander("Excel 工作表说明（7 个工作表）", expanded=False):
+        st.markdown(
+            "**工作表顺序**（共 7 个 Sheet）：\n"
+            "1. **基期实际**：公司合计指标、分部基期数据、来源类型、披露数据源、数据质量\n"
+            "2. **假设**：基期收入（蓝色可编辑）、Base 增长率、Base 毛利率、Bull/Bear 公式、费用率、税率\n"
+            "3. **假设依据**：每个 Base 假设的来源、预测方法、置信度、驱动因子类型、占位标记\n"
+            "4. **预测汇总**：Bull/Base/Bear 三情景的收入、毛利、毛利率、净利润、净利率\n"
+            "5. **Bull**：Bull 情景分部收入、毛利明细\n"
+            "6. **Base**：Base 情景分部收入、毛利明细\n"
+            "7. **Bear**：Bear 情景分部收入、毛利明细\n"
+            "\n"
+            "**颜色约定**：\n"
+            "- 蓝色字体：模型输入（可编辑）\n"
+            "- 黑色字体：公式计算结果\n"
+            "\n"
+            "**图表**：包含 Bull/Base/Bear 三情景收入趋势图。"
+        )
 
     # 限制说明
     st.divider()

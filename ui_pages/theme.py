@@ -79,131 +79,525 @@ def _tag(text: str, color: str, bg: str) -> str:
 
 GLOBAL_CSS = """
 <style>
-/* ── 容器 ─────────────────────────────── */
-/* 保证 Streamlit 顶部栏（stHeader，高 60px）不遮挡研究状态条和 Step 标题 */
+:root {
+    --td-ink: #172033;
+    --td-muted: #667085;
+    --td-soft: #98a2b3;
+    --td-primary: #2563eb;
+    --td-primary-dark: #1d4ed8;
+    --td-primary-soft: #eff6ff;
+    --td-surface: #ffffff;
+    --td-canvas: #f6f8fc;
+    --td-border: #e5eaf1;
+    --td-border-strong: #d5dce7;
+    --td-success: #15803d;
+    --td-warning: #a16207;
+    --td-radius: 14px;
+    --td-shadow: 0 1px 2px rgba(16, 24, 40, .03), 0 8px 24px rgba(16, 24, 40, .04);
+}
+
+html, body, [data-testid="stAppViewContainer"], .stApp {
+    background: var(--td-canvas);
+    color: var(--td-ink);
+}
+body, button, input, textarea, select {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+                 "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+/* 去除面向开发者的云端工具条，同时保留侧栏开合能力。 */
+[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {
+    display: none !important;
+}
+header[data-testid="stHeader"] {
+    height: 2.5rem;
+    background: transparent;
+}
+
+/* ── 主内容容器 ───────────────────────── */
 .block-container,
 div[data-testid="stMainBlockContainer"] {
-    max-width: 1280px !important;
-    padding-top: 4.5rem !important;
+    max-width: 1440px !important;
+    padding: 2.7rem 3rem 5rem !important;
+}
+[data-testid="stMain"] {
+    background:
+        radial-gradient(circle at 82% 0%, rgba(37, 99, 235, .045), transparent 24rem),
+        var(--td-canvas);
+}
+
+/* ── 侧边栏与品牌 ─────────────────────── */
+[data-testid="stSidebar"] {
+    min-width: 292px !important;
+    max-width: 292px !important;
+    background: #f9fafc;
+    border-right: 1px solid var(--td-border);
+}
+[data-testid="stSidebarContent"] {
+    padding: 1rem .9rem 1.5rem;
+}
+.td-sidebar-brand {
+    display: flex;
+    align-items: center;
+    gap: .72rem;
+    margin: .15rem .15rem 1.25rem;
+    padding: .45rem .35rem .85rem;
+    border-bottom: 1px solid var(--td-border);
+}
+.td-brand-mark {
+    display: grid;
+    place-items: center;
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+    border-radius: 11px;
+    color: #fff;
+    background: linear-gradient(145deg, #17365d, #2563eb);
+    box-shadow: 0 7px 18px rgba(37, 99, 235, .2);
+    font-size: .75rem;
+    font-weight: 800;
+    letter-spacing: -.03em;
+}
+.td-brand-name {
+    color: #101828;
+    font-size: 1rem;
+    line-height: 1.15;
+    font-weight: 760;
+    letter-spacing: -.02em;
+}
+.td-brand-subtitle {
+    color: var(--td-muted);
+    font-size: .68rem;
+    line-height: 1.35;
+    margin-top: .16rem;
+}
+.td-sidebar-label {
+    color: #98a2b3;
+    font-size: .66rem;
+    font-weight: 700;
+    letter-spacing: .11em;
+    text-transform: uppercase;
+    margin: .2rem .35rem .55rem;
+}
+[data-testid="stSidebar"] hr {
+    margin: .9rem .2rem;
+    border-color: var(--td-border);
+}
+[data-testid="stSidebar"] [data-testid="stButton"] button {
+    justify-content: flex-start;
+    min-height: 2.55rem;
+    padding: .55rem .75rem;
+    border-radius: 10px;
+    border-color: transparent;
+    background: transparent;
+    color: #475467;
+    box-shadow: none;
+    font-size: .85rem;
+    font-weight: 540;
+}
+[data-testid="stSidebar"] [data-testid="stButton"] button:hover {
+    color: #1d4ed8;
+    background: #eef4ff;
+    border-color: #dbe7ff;
+}
+[data-testid="stSidebar"] [data-testid="stButton"] button[kind="primary"],
+[data-testid="stSidebar"] [data-testid="stBaseButton-primary"] {
+    color: #1d4ed8 !important;
+    background: #eaf2ff !important;
+    border: 1px solid #cfe0ff !important;
+    box-shadow: inset 3px 0 0 #2563eb !important;
+    font-weight: 700 !important;
+}
+[data-testid="stSidebar"] details {
+    background: transparent;
+    border-color: var(--td-border);
+}
+[data-testid="stSidebar"] p,
+[data-testid="stSidebar"] li,
+[data-testid="stSidebar"] label {
+    color: #475467;
+    font-size: .8rem;
 }
 
 /* ── 顶部研究状态条 ───────────────────── */
 .td-status-bar {
     display: flex;
-    align-items: center;
-    gap: 14px;
-    padding: 8px 14px;
-    margin-bottom: .8rem;
-    background: #fff;
-    border: 1px solid #e6eaf0;
-    border-radius: 8px;
-    flex-wrap: wrap;
+    align-items: stretch;
+    gap: 0;
+    padding: .76rem .95rem;
+    margin-bottom: 1.45rem;
+    background: rgba(255, 255, 255, .94);
+    border: 1px solid var(--td-border);
+    border-radius: var(--td-radius);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .02);
+    overflow-x: auto;
 }
 .td-status-bar.empty {
-    justify-content: center;
-    color: #94a3b8;
-    font-size: .88rem;
-    padding: 10px 14px;
+    align-items: center;
+    justify-content: flex-start;
+    color: #667085;
+    font-size: .82rem;
+    padding: .9rem 1rem;
+    border-style: dashed;
+    box-shadow: none;
+}
+.td-status-bar.empty::before {
+    content: "";
+    width: 8px;
+    height: 8px;
+    margin-right: .55rem;
+    border-radius: 999px;
+    background: #cbd5e1;
 }
 .td-status-item {
     display: flex;
+    min-width: 0;
     flex-direction: column;
-    gap: 1px;
+    justify-content: center;
+    gap: .15rem;
+    padding: 0 .95rem;
 }
+.td-status-item:first-child { padding-left: .2rem; }
 .td-status-label {
-    font-size: .65rem;
-    color: #94a3b8;
-    font-weight: 500;
-    letter-spacing: .04em;
+    color: #98a2b3;
+    font-size: .62rem;
+    font-weight: 700;
+    letter-spacing: .075em;
     text-transform: uppercase;
+    white-space: nowrap;
 }
 .td-status-value {
-    font-size: .88rem;
-    color: #1e293b;
-    font-weight: 600;
+    color: #27364b;
+    font-size: .83rem;
+    font-weight: 650;
+    white-space: nowrap;
 }
 .td-status-divider {
     width: 1px;
-    height: 24px;
-    background: #e6eaf0;
+    flex: 0 0 1px;
+    min-height: 30px;
+    background: var(--td-border);
 }
 .td-status-pill {
-    display: inline-block;
-    padding: 2px 9px;
-    border-radius: 11px;
-    font-size: .73rem;
-    font-weight: 600;
-}
-.td-status-pill.ok { background: #dcfce7; color: #166534; }
-.td-status-pill.progress { background: #dbeafe; color: #1e40af; }
-.td-status-pill.warn { background: #fef3c7; color: #92400e; }
-.td-status-pill.empty { background: #f1f5f9; color: #64748b; }
-
-/* ── 左侧导航 ─────────────────────────── */
-.td-nav-section { margin-bottom: .3rem; }
-.td-nav-status {
-    font-size: .65rem;
-    color: #94a3b8;
-    margin-left: 6px;
-}
-
-/* ── 页面标题区 ───────────────────────── */
-.td-page-step {
-    color: #17365d;
-    font-size: .74rem;
+    display: inline-flex;
+    align-items: center;
+    width: fit-content;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    font-size: .68rem;
     font-weight: 700;
-    letter-spacing: .08em;
+    white-space: nowrap;
+}
+.td-status-pill.ok { background: #eaf8ef; color: #137333; }
+.td-status-pill.progress { background: #eaf2ff; color: #1d4ed8; }
+.td-status-pill.warn { background: #fff6df; color: #9a6700; }
+.td-status-pill.empty { background: #f2f4f7; color: #667085; }
+
+/* ── 页面标题与分节 ───────────────────── */
+.td-page-header {
+    margin: 0 0 1.45rem;
+    padding: 0 .1rem;
+}
+.td-page-step {
+    color: #2563eb;
+    font-size: .68rem;
+    font-weight: 800;
+    letter-spacing: .115em;
     text-transform: uppercase;
-    margin-bottom: 2px;
+    margin-bottom: .35rem;
 }
 .td-page-title {
-    font-size: 1.28rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin-bottom: 3px;
+    color: #101828;
+    font-size: clamp(1.55rem, 2.25vw, 2rem);
+    line-height: 1.2;
+    font-weight: 760;
+    letter-spacing: -.035em;
+    margin-bottom: .42rem;
 }
 .td-page-desc {
-    font-size: .85rem;
-    color: #64748b;
-    margin-bottom: .8rem;
+    max-width: 48rem;
+    color: var(--td-muted);
+    font-size: .9rem;
+    line-height: 1.65;
 }
-
-/* ── stMetric 卡片 ────────────────────── */
-div[data-testid="stMetric"] {
-    background: #f7f9fc;
-    border: 1px solid #e6eaf0;
-    padding: 12px;
+.td-section-header {
+    margin: 1.65rem 0 .78rem;
+}
+.td-section-title {
+    color: #1d2939;
+    font-size: 1rem;
+    line-height: 1.35;
+    font-weight: 720;
+    letter-spacing: -.012em;
+}
+.td-section-desc {
+    color: #7b8798;
+    font-size: .78rem;
+    line-height: 1.55;
+    margin-top: .2rem;
+}
+.td-meta-strip {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    flex-wrap: wrap;
+    margin: -.25rem 0 1rem;
+    padding: .68rem .8rem;
+    border: 1px solid var(--td-border);
     border-radius: 10px;
+    background: rgba(255, 255, 255, .72);
+    color: #667085;
+    font-size: .76rem;
+    line-height: 1.5;
+}
+.td-meta-strip strong { color: #344054; font-weight: 680; }
+.td-meta-divider { color: #c7ced8; }
+.td-note-line {
+    margin: .55rem 0 1rem;
+    padding: .65rem .8rem;
+    border-left: 3px solid #8fb4ff;
+    border-radius: 0 8px 8px 0;
+    background: #f5f8ff;
+    color: #536176;
+    font-size: .78rem;
+    line-height: 1.6;
+}
+.td-delivery-card {
+    margin: .2rem 0 1rem;
+    padding: 1rem 1.05rem;
+    border: 1px solid #cfe0ff;
+    border-radius: 14px;
+    background: linear-gradient(145deg, #ffffff, #f1f6ff);
+    box-shadow: 0 8px 26px rgba(37, 99, 235, .055);
+}
+.td-delivery-title {
+    color: #17365d;
+    font-size: .95rem;
+    font-weight: 740;
+    margin-bottom: .3rem;
+}
+.td-delivery-desc {
+    color: #667085;
+    font-size: .78rem;
+    line-height: 1.6;
 }
 
-/* ── 单选按钮（横向）──────────────────── */
+/* ── 常用 Streamlit 组件 ──────────────── */
+[data-testid="stVerticalBlockBorderWrapper"] {
+    border-color: var(--td-border) !important;
+    border-radius: var(--td-radius) !important;
+    background: var(--td-surface);
+}
+div[data-testid="stForm"] {
+    padding: .8rem .9rem;
+    border: 1px solid var(--td-border);
+    border-radius: var(--td-radius);
+    background: var(--td-surface);
+    box-shadow: var(--td-shadow);
+}
+[data-baseweb="input"] > div,
+[data-baseweb="select"] > div,
+[data-baseweb="textarea"] > div {
+    border-color: var(--td-border-strong) !important;
+    border-radius: 10px !important;
+    background: #fff !important;
+}
+[data-baseweb="input"] > div:focus-within,
+[data-baseweb="select"] > div:focus-within,
+[data-baseweb="textarea"] > div:focus-within {
+    border-color: #7aa7ff !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, .10) !important;
+}
+button[kind="primary"], [data-testid="stBaseButton-primary"],
+[data-testid="stDownloadButton"] button {
+    border: 1px solid #2563eb !important;
+    border-radius: 10px !important;
+    background: linear-gradient(180deg, #2f6fed, #2563eb) !important;
+    color: #fff !important;
+    box-shadow: 0 5px 14px rgba(37, 99, 235, .16) !important;
+    font-weight: 700 !important;
+}
+button[kind="primary"]:hover, [data-testid="stBaseButton-primary"]:hover,
+[data-testid="stDownloadButton"] button:hover {
+    background: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    box-shadow: 0 7px 18px rgba(37, 99, 235, .22) !important;
+}
+button[kind="secondary"], [data-testid="stBaseButton-secondary"] {
+    border-color: var(--td-border-strong);
+    border-radius: 10px;
+    background: #fff;
+    color: #344054;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .02);
+}
+button:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .22) !important;
+    outline-offset: 2px;
+}
+
+details[data-testid="stExpander"] {
+    overflow: hidden;
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    background: rgba(255, 255, 255, .84);
+    box-shadow: none;
+}
+details[data-testid="stExpander"] summary {
+    min-height: 2.8rem;
+    color: #344054;
+    font-weight: 620;
+}
+details[data-testid="stExpander"][open] {
+    background: #fff;
+    box-shadow: 0 7px 20px rgba(16, 24, 40, .035);
+}
+
+div[data-testid="stAlert"] {
+    border-radius: 12px;
+    border-width: 1px;
+    box-shadow: none;
+}
+div[data-testid="stAlert"] p,
+div[data-testid="stAlert"] li {
+    font-size: .82rem;
+    line-height: 1.6;
+}
+
+/* ── 指标卡 ───────────────────────────── */
+div[data-testid="stMetric"] {
+    min-height: 108px;
+    padding: 1rem 1.05rem;
+    border: 1px solid var(--td-border);
+    border-radius: var(--td-radius);
+    background: linear-gradient(155deg, #ffffff, #fbfcff);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .025);
+}
+div[data-testid="stMetric"] label {
+    color: #667085 !important;
+    font-size: .76rem !important;
+    font-weight: 620 !important;
+}
+div[data-testid="stMetricValue"] {
+    color: #172033;
+    font-size: clamp(1.45rem, 2.25vw, 2rem);
+    font-weight: 720;
+    letter-spacing: -.035em;
+}
+
+/* ── Tabs、单选与滑杆 ─────────────────── */
+button[data-baseweb="tab"] {
+    min-height: 2.8rem;
+    padding-left: .95rem;
+    padding-right: .95rem;
+    color: #667085;
+    font-weight: 620;
+}
+button[data-baseweb="tab"][aria-selected="true"] {
+    color: #1d4ed8;
+}
+div[role="radiogroup"][aria-orientation="horizontal"] {
+    display: flex;
+    gap: .42rem;
+    flex-wrap: wrap;
+}
 div[role="radiogroup"][aria-orientation="horizontal"] > label {
-    border: 1px solid #dfe5ee;
-    border-radius: 8px;
-    padding: .35rem .7rem;
-    margin-right: .4rem;
-    background: #f7f9fc;
+    margin: 0;
+    padding: .42rem .72rem;
+    border: 1px solid var(--td-border);
+    border-radius: 999px;
+    background: #fff;
+    color: #475467;
 }
 div[role="radiogroup"][aria-orientation="horizontal"] > label:has(input:checked) {
-    border-color: #0868d7;
-    background: #dbeafe;
-    color: #1e40af;
+    border-color: #b8d0ff;
+    background: var(--td-primary-soft);
+    color: #1d4ed8;
     font-weight: 700;
 }
+[data-baseweb="slider"] [role="slider"] {
+    box-shadow: 0 0 0 3px #fff, 0 0 0 5px rgba(37, 99, 235, .15);
+}
 
-/* ── 表格优化 ─────────────────────────── */
+/* ── 表格 ─────────────────────────────── */
 div[data-testid="stDataFrame"] {
     min-width: 0;
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    background: #fff;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .02);
 }
 div[data-testid="stDataFrame"] table {
     table-layout: auto;
 }
+[data-testid="stDataEditor"] {
+    border: 1px solid var(--td-border);
+    border-radius: 12px;
+    background: #fff;
+}
 
-/* ── 空状态 ────────────────────────────── */
+/* ── 文本节奏与空状态 ─────────────────── */
+p, li { line-height: 1.62; }
+h2, h3 { color: #1d2939; letter-spacing: -.02em; }
+h3 { margin-top: 1.45rem !important; font-size: 1.05rem !important; }
 .td-empty-state {
     text-align: center;
-    padding: 3rem 1rem;
-    color: #94a3b8;
+    padding: 3.5rem 1rem;
+    color: #98a2b3;
+}
+
+/* ── 响应式 ───────────────────────────── */
+@media (max-width: 1100px) {
+    .block-container,
+    div[data-testid="stMainBlockContainer"] {
+        padding-left: 1.7rem !important;
+        padding-right: 1.7rem !important;
+    }
+    [data-testid="stSidebar"] {
+        min-width: 276px !important;
+        max-width: 276px !important;
+    }
+}
+@media (max-width: 760px) {
+    header[data-testid="stHeader"] { height: 3rem; }
+    .block-container,
+    div[data-testid="stMainBlockContainer"] {
+        padding: 3.35rem 1rem 3.5rem 1.55rem !important;
+    }
+    .td-status-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+        margin-bottom: 1.1rem;
+        padding: .7rem .75rem;
+        overflow: visible;
+    }
+    .td-status-item {
+        min-width: 0;
+        padding: .35rem .45rem;
+    }
+    .td-status-item:first-child { padding-left: .45rem; }
+    .td-status-divider { display: none; }
+    .td-status-value {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+    .td-status-bar.empty {
+        display: flex;
+        white-space: normal;
+        line-height: 1.5;
+    }
+    .td-page-header { margin-bottom: 1.1rem; }
+    .td-page-title { font-size: 1.55rem; }
+    .td-page-desc { font-size: .84rem; }
+    div[data-testid="stMetric"] {
+        min-height: 92px;
+        padding: .8rem;
+    }
+    div[data-testid="stMetricValue"] { font-size: 1.35rem; }
+    div[role="radiogroup"][aria-orientation="horizontal"] > label {
+        padding: .36rem .58rem;
+        font-size: .76rem;
+    }
 }
 </style>
 """
@@ -212,6 +606,40 @@ div[data-testid="stDataFrame"] table {
 def render_global_css() -> None:
     """在页面顶部渲染全局 CSS。应在 app.py 中调用一次。"""
     st.markdown(GLOBAL_CSS, unsafe_allow_html=True)
+
+
+def render_sidebar_brand(version: str = "") -> None:
+    """渲染侧边栏品牌区，不创建任何交互状态。"""
+    safe_version = html.escape(str(version))
+    version_text = f" · {safe_version}" if safe_version else ""
+    st.markdown(
+        '<div class="td-sidebar-brand">'
+        '<div class="td-brand-mark">TD</div>'
+        '<div>'
+        '<div class="td-brand-name">TickerDNA</div>'
+        f'<div class="td-brand-subtitle">可解释财务预测工作台{version_text}</div>'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def render_section_header(title: str, description: str = "") -> None:
+    """渲染统一的页面分节标题。"""
+    safe_title = html.escape(str(title))
+    safe_description = html.escape(str(description))
+    description_html = (
+        f'<div class="td-section-desc">{safe_description}</div>'
+        if safe_description
+        else ""
+    )
+    st.markdown(
+        '<div class="td-section-header">'
+        f'<div class="td-section-title">{safe_title}</div>'
+        f'{description_html}'
+        '</div>',
+        unsafe_allow_html=True,
+    )
 
 
 # ── 状态条渲染 ─────────────────────────────────────────────────
@@ -229,7 +657,7 @@ def render_status_bar() -> None:
     if not company and not assumptions:
         st.markdown(
             '<div class="td-status-bar empty">'
-            '尚未确认公司 — 请在左侧「公司与项目」中搜索并确认上市公司'
+            '尚未开始研究 — 请在下方搜索并确认上市公司'
             '</div>',
             unsafe_allow_html=True,
         )
@@ -308,8 +736,10 @@ def render_page_header(step: str, title: str, description: str) -> None:
     safe_title = html.escape(str(title))
     safe_desc = html.escape(str(description))
     st.markdown(
-        f'<div class="td-page-step">{safe_step}</div>'
+        '<div class="td-page-header">'
+        f'<div class="td-page-step">{safe_step} / 5</div>'
         f'<div class="td-page-title">{safe_title}</div>'
-        f'<div class="td-page-desc">{safe_desc}</div>',
+        f'<div class="td-page-desc">{safe_desc}</div>'
+        '</div>',
         unsafe_allow_html=True,
     )

@@ -365,11 +365,14 @@ def render_sidebar() -> int:
     公司名称和阶段已在顶部状态条展示，侧边栏不重复。
     美股官方资料等高级设置移至"高级设置"折叠区。
     """
-    st.markdown("**预测年数**")
+    st.markdown(
+        '<div class="td-sidebar-label">模型范围</div>',
+        unsafe_allow_html=True,
+    )
     year_count = st.slider(
-        "预测年数", 3, 10, 5,
+        "预测年数（年）", 3, 10, 5,
         key="_year_count_slider",
-        label_visibility="collapsed",
+        help="选择 Base、Bull、Bear 情景向未来延伸的年度数量。",
     )
     set_year_count(year_count)
 
@@ -450,8 +453,12 @@ def render_page_sidebar_extras(page: str) -> None:
     if not assumptions:
         return
 
+    st.markdown(
+        '<div class="td-sidebar-label" style="margin-top:1rem">本页摘要</div>',
+        unsafe_allow_html=True,
+    )
+
     if page == "source":
-        st.markdown(f"- 资料来源：{assumptions.get('source_category', '—')}")
         st.markdown(f"- 资料质量：{assumptions.get('data_quality', '—')}")
         requested = assumptions.get("requested_split_basis") or "自动选择"
         st.markdown(f"- 拆分口径：{requested}")

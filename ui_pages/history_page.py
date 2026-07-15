@@ -47,7 +47,7 @@ def render_history_page() -> None:
     if not assumptions:
         return
 
-    from ui_pages.theme import render_page_header
+    from ui_pages.theme import render_page_header, render_section_header
     render_page_header(
         "Step 2",
         "历史业务与财务资料",
@@ -60,10 +60,18 @@ def render_history_page() -> None:
     _render_source_summary(assumptions)
 
     # ── 公司合计指标 ──────────────────────────────────────
+    render_section_header(
+        "公司财务概览",
+        "先确认公司合计口径，再向下核对分部历史表现。",
+    )
     _render_company_totals(assumptions)
 
     # ── 历史期间选择 ──────────────────────────────────────
     all_historical_years = get_available_historical_years(segments)
+    render_section_header(
+        "选择历史期间",
+        "默认展示最近三个可比财年；选择后向下查看分部表现。",
+    )
     selected_years, selection_label = _render_period_selector(all_historical_years)
 
     if not selected_years:
@@ -133,9 +141,13 @@ def _render_source_summary(assumptions: dict) -> None:
     safe_data_quality = _html.escape(str(data_quality))
     safe_split_basis_display = _html.escape(str(split_basis_display))
     st.markdown(
-        f"**来源类型**：{safe_source_category} {source_tag}　|　"
-        f"**资料质量**：{safe_data_quality}　|　"
-        f"**拆分口径**：{safe_split_basis_display}",
+        '<div class="td-meta-strip">'
+        f'<span><strong>来源</strong>　{safe_source_category} {source_tag}</span>'
+        '<span class="td-meta-divider">/</span>'
+        f'<span><strong>资料质量</strong>　{safe_data_quality}</span>'
+        '<span class="td-meta-divider">/</span>'
+        f'<span><strong>拆分口径</strong>　{safe_split_basis_display}</span>'
+        '</div>',
         unsafe_allow_html=True,
     )
 
@@ -191,19 +203,15 @@ def _render_period_selector(all_years: list[str]) -> tuple[list[str], str]:
     if not all_years:
         return [], ""
 
-    st.markdown("**选择历史期间**")
-
-    col_select, col_info = st.columns([1, 2])
-    with col_select:
-        # 默认选中"最近 3 年"（index=1）
-        selection = st.radio(
-            "历史期间",
-            ["最近 1 年", "最近 3 年", "最近 5 年", "自定义起止财年"],
-            index=1,
-            label_visibility="collapsed",
-            horizontal=True,
-            key="_history_period_selection",
-        )
+    # 默认选中"最近 3 年"（index=1）。选择器独占整行，避免窄列换行。
+    selection = st.radio(
+        "历史期间",
+        ["最近 1 年", "最近 3 年", "最近 5 年", "自定义起止财年"],
+        index=1,
+        label_visibility="collapsed",
+        horizontal=True,
+        key="_history_period_selection",
+    )
 
     selection_map = {
         "最近 1 年": "recent_1",
@@ -236,23 +244,22 @@ def _render_period_selector(all_years: list[str]) -> tuple[list[str], str]:
         all_years, selection_key, custom_start, custom_end
     )
 
-    with col_info:
-        if selected:
-            year_labels = [f"FY{y}" for y in selected]
-            st.caption(f"已选期间：{', '.join(year_labels)}")
-            # 不足 3 年时明确提示
-            if selection_key == "recent_3" and len(selected) < 3:
-                st.caption(
-                    f"⚠ 当前仅取得 {len(selected)} 个历史财年"
-                    f"（{', '.join(year_labels)}），已展示全部可用年度。"
-                )
-            elif selection_key == "recent_5" and len(selected) < 5:
-                st.caption(
-                    f"⚠ 当前仅取得 {len(selected)} 个历史财年"
-                    f"（{', '.join(year_labels)}），已展示全部可用年度。"
-                )
-        else:
-            st.caption("未匹配到历史年度")
+    if selected:
+        year_labels = [f"FY{y}" for y in selected]
+        st.caption(f"已选期间：{', '.join(year_labels)}")
+        # 不足 3 年时明确提示
+        if selection_key == "recent_3" and len(selected) < 3:
+            st.caption(
+                f"⚠ 当前仅取得 {len(selected)} 个历史财年"
+                f"（{', '.join(year_labels)}），已展示全部可用年度。"
+            )
+        elif selection_key == "recent_5" and len(selected) < 5:
+            st.caption(
+                f"⚠ 当前仅取得 {len(selected)} 个历史财年"
+                f"（{', '.join(year_labels)}），已展示全部可用年度。"
+            )
+    else:
+        st.caption("未匹配到历史年度")
 
     return selected, selection
 
@@ -287,10 +294,16 @@ def _render_fiscal_year_nature(assumptions: dict, selected_years: list[str]) -> 
     forecast_years = assumption_forecast_years(assumptions, year_count)
     first_forecast = f"FY{forecast_years[0]}E" if forecast_years else "未确定"
 
-    st.info(
-        f"**最近披露财年**：{latest_label}　|　"
-        f"**预测首年**：{first_forecast}　|　"
-        f"**币种 / 单位**：{currency}"
+    import html as _html
+    st.markdown(
+        '<div class="td-note-line">'
+        f'<strong>最近披露财年</strong>　{_html.escape(str(latest_label))}'
+        '　<span class="td-meta-divider">/</span>　'
+        f'<strong>预测首年</strong>　{_html.escape(str(first_forecast))}'
+        '　<span class="td-meta-divider">/</span>　'
+        f'<strong>币种 / 单位</strong>　{_html.escape(str(currency))}'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
 

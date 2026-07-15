@@ -26,6 +26,7 @@ from ui_pages.state import (
 )
 from ui_pages.theme import (
     render_global_css,
+    render_sidebar_brand,
     render_status_bar,
 )
 from ui_pages.company_page import render_company_page
@@ -65,14 +66,11 @@ render_global_css()
 
 
 with st.sidebar:
-    year_count = render_sidebar()
+    render_sidebar_brand(APP_VERSION)
     page = current_page()
-    render_page_sidebar_extras(page)
-    render_data_source_config()
 
     # 左侧阶段导航
-    st.divider()
-    st.markdown("**阶段导航**")
+    st.markdown('<div class="td-sidebar-label">研究流程</div>', unsafe_allow_html=True)
     order = [p[0] for p in PAGES]
     try:
         current_idx = order.index(page)
@@ -87,10 +85,16 @@ with st.sidebar:
         st.button(
             f"{prefix}{label}",
             key=f"_nav_btn_{key}",
+            type="primary" if is_current else "secondary",
             use_container_width=True,
             on_click=navigate_to,
             args=(key,),
         )
+
+    st.divider()
+    render_page_sidebar_extras(page)
+    year_count = render_sidebar()
+    render_data_source_config()
 
 
 # ── 顶部研究状态条 ───────────────────────────────────────────
