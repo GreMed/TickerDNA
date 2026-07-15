@@ -105,13 +105,30 @@ body, button, input, textarea, select {
                  "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
 }
 
-/* 去除面向开发者的云端工具条，同时保留侧栏开合能力。 */
-[data-testid="stToolbar"], [data-testid="stDecoration"], #MainMenu, footer {
+/* 隐藏面向开发者的装饰元素。
+   toolbarMode = "minimal" 已隐藏开发者菜单（部署、分享等）。
+   不隐藏 stHeader —— Streamlit 1.50 中它承载收起后的 stExpandSidebarButton。 */
+[data-testid="stDecoration"], #MainMenu, footer {
     display: none !important;
 }
 header[data-testid="stHeader"] {
     height: 2.5rem;
     background: transparent;
+}
+/* Streamlit 1.50 原生默认 stSidebarCollapseButton visibility:hidden（仅 hover 显示）。
+   强制始终可见，确保用户能直接看到向左双箭头。 */
+[data-testid="stSidebarCollapseButton"],
+[data-testid="stSidebarCollapseButton"] button,
+[data-testid="stSidebarCollapseButton"] [data-testid="stIconMaterial"] {
+    visibility: visible !important;
+    opacity: 1 !important;
+}
+/* 收起后的展开按钮同样强制可见（向右双箭头）。 */
+[data-testid="stExpandSidebarButton"],
+[data-testid="stExpandSidebarButton"] button,
+[data-testid="stExpandSidebarButton"] [data-testid="stIconMaterial"] {
+    visibility: visible !important;
+    opacity: 1 !important;
 }
 
 /* ── 主内容容器 ───────────────────────── */
@@ -128,10 +145,22 @@ div[data-testid="stMainBlockContainer"] {
 
 /* ── 侧边栏与品牌 ─────────────────────── */
 [data-testid="stSidebar"] {
-    min-width: 292px !important;
-    max-width: 292px !important;
     background: #f9fafc;
     border-right: 1px solid var(--td-border);
+}
+/* 仅在展开时设定宽度，收起时让 Streamlit 原生归零，不强制 min-width。 */
+[data-testid="stSidebar"][aria-expanded="true"] {
+    min-width: 292px;
+    max-width: 292px;
+}
+/* Streamlit 1.50 收起时仍保留内联 width / flex-basis；显式归零，
+   否则侧栏虽然移出屏幕，主内容左侧仍会空出约 256px。 */
+[data-testid="stSidebar"][aria-expanded="false"] {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    flex-basis: 0 !important;
+    border-right: 0;
 }
 [data-testid="stSidebarContent"] {
     padding: 1rem .9rem 1.5rem;
@@ -382,6 +411,97 @@ div[data-testid="stMainBlockContainer"] {
     line-height: 1.6;
 }
 
+/* ── 首页推荐完整体验案例 ─────────────── */
+.td-demo-section {
+    margin: 1.2rem 0 1rem;
+}
+.td-demo-header {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .7rem;
+}
+.td-demo-title {
+    color: #17365d;
+    font-size: 1rem;
+    font-weight: 700;
+}
+.td-demo-tag {
+    display: inline-block;
+    padding: 1px 7px;
+    border-radius: 999px;
+    background: #eef4ff;
+    color: #2563eb;
+    font-size: .66rem;
+    font-weight: 600;
+}
+.td-demo-desc {
+    color: #667085;
+    font-size: .8rem;
+    line-height: 1.55;
+    margin-bottom: .8rem;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button {
+    position: relative;
+    justify-content: flex-start;
+    min-height: 5.4rem;
+    padding: .95rem 3.2rem .95rem 1.1rem;
+    border: 1px solid #cfe0ff;
+    border-radius: 12px;
+    background: linear-gradient(155deg, #ffffff, #f3f8ff);
+    color: #101828;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .02);
+    transition: border-color .16s ease, box-shadow .16s ease,
+                transform .16s ease, background .16s ease;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button:hover {
+    border-color: #8eb7ff;
+    background: linear-gradient(155deg, #ffffff, #edf5ff);
+    box-shadow: 0 8px 22px rgba(37, 99, 235, .09);
+    transform: translateY(-1px);
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button:focus-visible {
+    outline: 3px solid rgba(37, 99, 235, .28);
+    outline-offset: 2px;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button p {
+    width: 100%;
+    margin: 0;
+    color: #101828;
+    font-size: .92rem;
+    font-weight: 700;
+    line-height: 1.65;
+    text-align: left;
+    white-space: pre-line;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button p::first-line {
+    color: #101828;
+    font-size: .92rem;
+    font-weight: 700;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button::after {
+    content: "→";
+    position: absolute;
+    right: 1.15rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #2563eb;
+    font-size: 1.15rem;
+    font-weight: 700;
+}
+[class*="st-key-demo_card_"] [data-testid="stButton"] button p {
+    color: #667085;
+}
+.td-demo-note {
+    margin-top: .8rem;
+    color: #98a2b3;
+    font-size: .72rem;
+    line-height: 1.5;
+}
+.td-demo-compact {
+    margin-top: .8rem;
+}
+
 /* ── 常用 Streamlit 组件 ──────────────── */
 [data-testid="stVerticalBlockBorderWrapper"] {
     border-color: var(--td-border) !important;
@@ -552,9 +672,9 @@ h3 { margin-top: 1.45rem !important; font-size: 1.05rem !important; }
         padding-left: 1.7rem !important;
         padding-right: 1.7rem !important;
     }
-    [data-testid="stSidebar"] {
-        min-width: 276px !important;
-        max-width: 276px !important;
+    [data-testid="stSidebar"][aria-expanded="true"] {
+        min-width: 276px;
+        max-width: 276px;
     }
 }
 @media (max-width: 760px) {
@@ -737,7 +857,7 @@ def render_page_header(step: str, title: str, description: str) -> None:
     safe_desc = html.escape(str(description))
     st.markdown(
         '<div class="td-page-header">'
-        f'<div class="td-page-step">{safe_step} / 5</div>'
+        f'<div class="td-page-step">{safe_step} / 6</div>'
         f'<div class="td-page-title">{safe_title}</div>'
         f'<div class="td-page-desc">{safe_desc}</div>'
         '</div>',

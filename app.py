@@ -19,6 +19,7 @@ from ui_pages.state import (
     current_page,
     get_assumptions,
     navigate_to,
+    render_pending_scroll_to_top,
     render_sidebar,
     render_data_source_config,
     render_page_sidebar_extras,
@@ -33,6 +34,7 @@ from ui_pages.company_page import render_company_page
 from ui_pages.history_page import render_history_page
 from ui_pages.assumption_page import render_assumption_page
 from ui_pages.forecast_page import render_forecast_page
+from ui_pages.valuation_page import render_valuation_page
 from ui_pages.export_page import render_export_page
 
 logging.basicConfig(
@@ -135,9 +137,12 @@ def _render_current_page(year_count: int) -> None:
     elif page == "forecast":
         render_forecast_page(model_years)
         render_prev_step_button("forecast")
+    elif page == "valuation":
+        render_valuation_page(model_years)
     elif page == "export":
         render_export_page(model_years)
         render_prev_step_button("export")
 
 
 _render_current_page(year_count)
+render_pending_scroll_to_top()

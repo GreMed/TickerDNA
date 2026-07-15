@@ -17,18 +17,20 @@ APP_RELEASE_DATE = "2026-07-15"
 
 
 # 页面定义（key, 中文名, 描述, 用户友好阶段名）
-# Phase 12B-1：五步研究流程
+# Phase 15-1：六步研究流程
 #   1. 公司与项目
 #   2. 历史业务与财务资料（合并旧"资料与证据"+"业务拆分"）
 #   3. 假设与驱动因子
 #   4. 预测与情景
-#   5. 导出与交付
+#   5. 估值与市场对照（示范）
+#   6. 导出与交付
 # "split" key 保留用于内部兼容（旧 session_state），但不再是独立步骤。
 PAGES = [
     ("company", "公司与项目", "公司搜索与证券确认", "公司与项目"),
     ("source", "历史业务与财务资料", "分部收入、毛利率、历史趋势与来源备查", "历史业务与财务资料"),
     ("assumption", "假设与驱动因子", "Base 假设、振幅与预测逻辑", "假设与驱动因子"),
     ("forecast", "预测与情景", "图表、预测结果、情景对比", "预测与情景"),
+    ("valuation", "估值与市场对照", "估值与市场对照（示范）", "估值与市场对照"),
     ("export", "导出与交付", "Excel 下载与限制说明", "导出与交付"),
 ]
 
@@ -48,11 +50,44 @@ def navigate_to(page: str) -> None:
     """切换到指定页面。
 
     Phase 12B-1：旧 "split" key 自动重定向到 "source"（历史业务与财务资料）。
+    Phase 15-1：导航后回到当前页面顶部，不继承上一页的滚动位置。
     """
     if page == "split":
         page = "source"
     if any(p[0] == page for p in PAGES):
         st.session_state["_current_page"] = page
+        # 回调发生在旧页面渲染周期，不能在这里直接操作新页面 DOM。
+        # 留下待处理标记，由新页面完成渲染后统一执行滚动。
+        st.session_state["_scroll_to_top_pending"] = True
+
+
+def render_pending_scroll_to_top() -> None:
+    """在目标页面渲染完成后执行一次可靠的回到顶部。"""
+    if not st.session_state.pop("_scroll_to_top_pending", False):
+        return
+
+    import streamlit.components.v1 as components
+
+    components.html(
+        """<script>
+        (() => {
+          const parentDoc = window.parent.document;
+          let attempts = 0;
+          const scroll = () => {
+            const main = parentDoc.querySelector('[data-testid="stMain"]')
+              || parentDoc.querySelector('section.main')
+              || parentDoc.querySelector('.stMain');
+            if (main) {
+              main.scrollTo({top: 0, behavior: 'instant'});
+              return;
+            }
+            if (attempts++ < 20) window.setTimeout(scroll, 50);
+          };
+          scroll();
+        })();
+        </script>""",
+        height=0,
+    )
 
 
 def page_order() -> list[str]:
@@ -483,6 +518,14 @@ def render_page_sidebar_extras(page: str) -> None:
         low_count = sum(1 for it in items if it.get("confidence") == "low")
         if low_count > 0:
             st.caption(f"其中 {low_count} 项假设依据不足，请谨慎参考预测结果")
+
+    elif page == "valuation":
+        from modeling.demo_valuation import is_valuation_supported
+        symbol = assumptions.get("symbol") or assumptions.get("ticker", "")
+        if is_valuation_supported(symbol):
+            st.markdown("- 估值演示：已支持")
+        else:
+            st.markdown("- 估值演示：尚未配置")
 
     elif page == "export":
         has_forecast = st.session_state.get("_forecast_results") is not None

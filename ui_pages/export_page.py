@@ -1,4 +1,4 @@
-"""导出与交付页 — Step 5 Excel 下载与限制说明。
+"""导出与交付页 — Step 6 Excel 下载与限制说明。
 
 从原 app.py 迁移，保持业务逻辑不变。
 """
@@ -30,7 +30,7 @@ def render_export_page(years: list[int]) -> None:
         return
 
     from ui_pages.theme import render_page_header
-    render_page_header("Step 5", "导出与交付", "下载包含基期实际、假设、预测和情景对比的 Excel 模型。")
+    render_page_header("Step 6", "导出与交付", "下载包含基期实际、假设、预测和情景对比的 Excel 模型。")
 
     # 重新计算 forecasts 和 summary（因为用户可能在假设页修改了假设）
     try:
@@ -113,8 +113,10 @@ def render_export_page(years: list[int]) -> None:
     st.divider()
     with st.expander("⚠ 已知限制"):
         st.markdown(
-            "- **不做 EPS、现金流、估值、目标价、券商预期**\n"
-            "- **不做资产负债表、现金流量表**\n"
+            "- **Excel 当前暂不导出估值对照**\n"
+            "- **产品当前仅提供 Apple、腾讯静态估值演示**\n"
+            "- **不提供真实券商一致预期、真实目标价或实时估值数据**\n"
+            "- **不做 EPS、现金流、资产负债表、现金流量表**\n"
             "- 预测基于 Base 假设 + 振幅生成 Bull/Bear，不是独立预测\n"
             "- 部分假设为资料不足时的初始假设，尚未接入真实经营数据\n"
             "- 预测逻辑基于规则推断，未实现真实因子拆解\n"

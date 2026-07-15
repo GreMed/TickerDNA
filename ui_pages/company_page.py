@@ -34,57 +34,207 @@ from ui_pages.state import navigate_to, render_next_step_button, replace_assumpt
 
 logger = logging.getLogger("tickerdna.app")
 
-# Phase 13：推荐完整体验案例
+# Phase 15-0：推荐完整体验案例
 DEMO_CASES = [
     {
         "symbol": "AAPL",
         "name": "Apple Inc.",
-        "label": "Apple（AAPL）",
-        "description": "产品分部 · FY2025 · 美元百万元",
+        "short_label": "Apple · AAPL",
+        "card_title": "Apple · AAPL",
+        "card_sub": "美股 · 产品分部 · 3 年历史",
+        "button_label": "Apple · AAPL\n美股 · 产品分部 · 3 年历史",
+        "loading_label": "正在载入 Apple 完整案例……",
+        "label": "Apple · AAPL",
+        "description": "美股 · 产品分部 · 3 年历史",
     },
     {
         "symbol": "0700.HK",
         "name": "腾讯控股有限公司",
-        "label": "腾讯控股（0700.HK）",
-        "description": "业务分部 · FY2025 · 人民币百万元",
+        "short_label": "腾讯控股 · 0700.HK",
+        "card_title": "腾讯控股 · 0700.HK",
+        "card_sub": "港股 · 业务分部 · 3 年历史",
+        "button_label": "腾讯控股 · 0700.HK\n港股 · 业务分部 · 3 年历史",
+        "loading_label": "正在载入腾讯完整案例……",
+        "label": "腾讯控股 · 0700.HK",
+        "description": "港股 · 业务分部 · 3 年历史",
     },
 ]
 
 
-def _render_demo_cases() -> None:
-    """渲染推荐完整体验案例区域。
+def _has_active_search() -> bool:
+    """判断用户是否已开始搜索或确认公司。"""
+    return bool(
+        st.session_state.get("search_query")
+        or st.session_state.get("company_candidates")
+        or st.session_state.get("search_error")
+        or st.session_state.get("search_empty")
+        or st.session_state.get("selected_company")
+        or st.session_state.get("assumptions")
+    )
 
-    Phase 13：低干扰的示范案例入口。
-    点击只填入搜索查询并触发搜索，不自动开始研究、不自动跳页。
+
+def _match_candidate_by_symbol(candidates, target_symbol: str):
+    """按案例目标股票代码精确匹配候选。
+
+    统一大小写和常见市场后缀后比较。
+    返回匹配的 CompanyCandidate 或 None。
     """
-    with st.expander("推荐完整体验案例", expanded=False):
-        st.caption(
-            "以下案例已内置已核验的官方资料快照，可完整体验搜索→历史→假设→预测→导出全流程。"
-            "内置已核验示范案例，不等于实时研究结果。"
+    def _normalize(s: str) -> str:
+        s = (s or "").strip().upper()
+        # 统一后缀格式
+        s = s.replace(".SS", ".SH").replace(".", "")
+        return s
+
+    target = _normalize(target_symbol)
+    for c in candidates:
+        if _normalize(c.symbol) == target:
+            return c
+    return None
+
+
+def _start_demo_case(case: dict) -> None:
+    """执行完整案例研究流程：搜索 → 确认 → 读取资料 → 跳转历史页。
+
+    复用现有 perform_company_search / perform_research，不旁路业务逻辑。
+    按案例目标股票代码精确匹配候选，不直接取第一个候选。
+    """
+    symbol = case["symbol"]
+    loading_label = case["loading_label"]
+
+    # 清除旧搜索状态
+    st.session_state["search_query"] = symbol
+    st.session_state["search_error"] = None
+    st.session_state["search_empty"] = False
+
+    with st.spinner(loading_label):
+        # 第一步：搜索公司
+        candidates, search_error = perform_company_search(symbol)
+        if search_error or not candidates:
+            st.session_state["search_error"] = search_error or "未找到该公司，请重试。"
+            st.session_state["search_empty"] = not candidates
+            st.session_state["company_candidates"] = []
+            st.rerun()
+            return
+
+        st.session_state["company_candidates"] = [
+            c.to_dict() for c in candidates
+        ]
+
+        # 第二步：按目标股票代码精确匹配候选（不直接取第一个）
+        selected_company = _match_candidate_by_symbol(candidates, symbol)
+        if selected_company is None:
+            st.session_state["search_error"] = (
+                f"未在搜索结果中找到目标证券 {symbol}，请在搜索结果中手动确认。"
+            )
+            st.rerun()
+            return
+
+        # 切换公司时清除上一家状态
+        last_symbol = st.session_state.get("last_selected_company_symbol")
+        if last_symbol != selected_company.symbol:
+            company_switch_cleanup(st.session_state)
+            st.session_state["last_selected_company_symbol"] = selected_company.symbol
+
+        # 第三步：检查是否可开始研究
+        if not can_start_research(selected_company):
+            st.session_state["search_error"] = "该公司暂时无法自动开始研究，请在搜索结果中手动确认。"
+            st.rerun()
+            return
+
+        # 第四步：构造拆分口径（复用现有默认逻辑）
+        split_choice = default_split_choice_for_company(selected_company)
+        split_basis = split_basis_request(split_choice)
+
+        # 第五步：执行研究
+        assumptions, source, fallback_msg, error_msg, avail_dims = perform_research(
+            selected_company, "", split_basis
         )
+
+        if error_msg:
+            st.session_state["research_error"] = error_msg
+            st.session_state["search_error"] = error_msg
+            st.rerun()
+            return
+
+        if assumptions is not None and avail_dims is not None:
+            # 需要确认拆分口径（demo case 一般不会走到这里，但保持兼容）
+            st.session_state["pending_split_confirmation"] = {
+                "company": selected_company.to_dict(),
+                "company_context": "",
+                "split_basis": split_basis,
+                "fallback_assumptions": assumptions,
+                "fallback_source": source,
+                "available_dimensions": avail_dims,
+            }
+            st.rerun()
+            return
+
+        if assumptions is not None:
+            # 研究成功：写入状态并跳转历史页
+            replace_assumptions_state(
+                assumptions,
+                source,
+                fallback_message=fallback_msg,
+                selected_company=selected_company.to_dict(),
+            )
+            navigate_to("source")
+            st.rerun()
+            return
+
+        # 研究失败
+        st.session_state["search_error"] = "案例载入失败，请稍后重试或在搜索结果中手动操作。"
+        st.rerun()
+
+
+def _render_demo_cases_full() -> None:
+    """空白首页：直接显示两张案例卡（不折叠）。"""
+    st.markdown(
+        '<div class="td-demo-section">'
+        '<div class="td-demo-header">'
+        '<span class="td-demo-title">推荐完整体验</span>'
+        '<span class="td-demo-tag">约 5 分钟</span>'
+        '<span class="td-demo-tag">无需配置数据源</span>'
+        '</div>'
+        '<div class="td-demo-desc">'
+        '使用已核验资料快照，体验历史数据 → 假设 → 预测 → 导出'
+        '</div>'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+    cols = st.columns(len(DEMO_CASES))
+    for col, case in zip(cols, DEMO_CASES):
+        with col:
+            card_key = case["symbol"].lower().replace(".", "_")
+            # 用一个原生按钮承载整张卡片：完整区域均可点击，同时保留
+            # 键盘焦点、Enter / Space 操作与 Streamlit 的回调语义。
+            with st.container(key=f"demo_card_{card_key}"):
+                if st.button(
+                    case["button_label"],
+                    key=f"demo_case_{card_key}",
+                    help=f"载入 {case['card_title']} 完整案例",
+                    use_container_width=True,
+                ):
+                    _start_demo_case(case)
+    st.markdown(
+        '<div class="td-demo-note">'
+        '示例使用指定日期的内置资料快照，不等于实时研究结果。'
+        '</div>',
+        unsafe_allow_html=True,
+    )
+
+
+def _render_demo_cases_compact() -> None:
+    """用户已搜索时：降级为轻量入口。"""
+    with st.expander("体验其他完整案例", expanded=False):
         cols = st.columns(len(DEMO_CASES))
         for col, case in zip(cols, DEMO_CASES):
             with col:
                 if st.button(
-                    case["label"],
-                    key=f"demo_case_{case['symbol']}",
+                    case["short_label"],
+                    key=f"demo_case_compact_{case['symbol']}",
                     use_container_width=True,
                 ):
-                    # 只填入搜索查询并触发搜索，不自动跳页
-                    st.session_state["search_query"] = case["symbol"]
-                    st.session_state["search_error"] = None
-                    st.session_state["search_empty"] = False
-                    with st.spinner("正在查找上市公司..."):
-                        candidates, error = perform_company_search(case["symbol"])
-                        st.session_state["company_candidates"] = [
-                            candidate.to_dict() for candidate in candidates
-                        ]
-                        if error:
-                            st.session_state["search_error"] = error
-                        elif not candidates:
-                            st.session_state["search_empty"] = True
-                    st.rerun()
-                st.caption(case["description"])
+                    _start_demo_case(case)
 
 
 def render_company_page() -> None:
@@ -129,9 +279,10 @@ def render_company_page() -> None:
                 st.session_state["search_empty"] = True
 
     # ── 推荐完整体验案例 ──────────────────────────────
-    # Phase 13：低干扰的示范案例入口，点击只填入搜索框，
-    # 不自动开始研究、不自动跳页、不自动打开新窗口。
-    _render_demo_cases()
+    # Phase 15-0：空白首页直接显示案例卡（不折叠）；
+    # 用户已搜索时降级为轻量入口，放在搜索结果之后。
+    if not _has_active_search():
+        _render_demo_cases_full()
 
     # 显示搜索结果状态
     search_error = st.session_state.get("search_error")
@@ -199,6 +350,10 @@ def render_company_page() -> None:
                         st.rerun()
                     except Exception:
                         st.error("AI 生成失败，请稍后重试或检查输入内容。")
+
+    # Phase 15-0：用户已搜索/确认公司后，案例入口缩为轻量入口，放在搜索结果之后
+    if _has_active_search():
+        _render_demo_cases_compact()
 
     # 下一步提示
     if st.session_state.get("assumptions") is not None:
