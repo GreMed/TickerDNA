@@ -39,6 +39,82 @@ NOT_APPLICABLE = "不适用"
 MISSING = "—"
 
 
+# 估值页会同时接收披露层的 ISO 代码（如 ``USD百万元``）和展示层的
+# 中文标签（如 ``美元百万元``）。比较前必须拆开“币种”和“金额单位”，
+# 否则同一口径会因为显示名称不同被误判为不兼容。
+_KNOWN_AMOUNT_UNITS = (
+    "百万元",
+    "千万元",
+    "十万元",
+    "亿元",
+    "万元",
+    "千元",
+    "million",
+    "millions",
+)
+
+_CURRENCY_ALIASES = {
+    "USD": "USD",
+    "US$": "USD",
+    "$": "USD",
+    "美元": "USD",
+    "美金": "USD",
+    "CNY": "CNY",
+    "RMB": "CNY",
+    "人民币": "CNY",
+    "人民币元": "CNY",
+    "HKD": "HKD",
+    "HK$": "HKD",
+    "港元": "HKD",
+    "港币": "HKD",
+}
+
+_UNIT_ALIASES = {
+    "百万元": "MILLION",
+    "million": "MILLION",
+    "millions": "MILLION",
+    "千万元": "TEN_MILLION",
+    "十万元": "HUNDRED_THOUSAND",
+    "亿元": "HUNDRED_MILLION",
+    "万元": "TEN_THOUSAND",
+    "千元": "THOUSAND",
+}
+
+
+def _split_currency_and_embedded_unit(value: Any) -> tuple[str, str]:
+    """把复合标签拆成币种文本与金额单位。
+
+    例如 ``USD百万元`` → ``("USD", "百万元")``，
+    ``美元百万元`` → ``("美元", "百万元")``。
+    """
+    raw = str(value or "").strip()
+    if not raw:
+        return "", ""
+
+    lowered = raw.lower()
+    for unit in _KNOWN_AMOUNT_UNITS:
+        if lowered.endswith(unit.lower()):
+            return raw[: -len(unit)].strip(), unit
+    return raw, ""
+
+
+def _normalize_currency(value: Any) -> str:
+    """将 ISO 代码和中英文显示标签归一化为同一币种代码。"""
+    currency_text, _ = _split_currency_and_embedded_unit(value)
+    compact = currency_text.replace(" ", "").upper()
+    if not compact:
+        return ""
+    return _CURRENCY_ALIASES.get(compact, compact)
+
+
+def _normalize_unit(value: Any) -> str:
+    """将中英文金额单位归一化，同时保留未知单位的严格比较语义。"""
+    raw = str(value or "").strip()
+    if not raw:
+        return ""
+    return _UNIT_ALIASES.get(raw.lower(), raw.upper())
+
+
 def _safe_ratio(numerator: float, denominator: float) -> float | str:
     """安全计算比率，输入无效或分母为 0 时返回 NOT_APPLICABLE。"""
     if not _is_valid_number(numerator) or not _is_valid_number(denominator):
@@ -72,11 +148,11 @@ def _is_valid_number(value: Any) -> bool:
 
 def _currency_compatible(assumptions: dict[str, Any], demo_data: dict[str, Any]) -> bool:
     """检查币种是否一致。币种缺失视为不兼容。"""
-    ac = (assumptions.get("currency") or "").strip()
-    dc = (demo_data.get("currency") or "").strip()
+    ac = _normalize_currency(assumptions.get("currency"))
+    dc = _normalize_currency(demo_data.get("currency"))
     if not ac or not dc:
         return False
-    return ac.upper() == dc.upper()
+    return ac == dc
 
 
 def _unit_compatible(assumptions: dict[str, Any], demo_data: dict[str, Any]) -> bool:
@@ -90,25 +166,27 @@ def _unit_compatible(assumptions: dict[str, Any], demo_data: dict[str, Any]) -> 
     au = (assumptions.get("unit") or "").strip()
     du = (demo_data.get("unit") or "").strip()
 
-    # 双方都有独立 unit 字段：直接比较
-    if au and du:
-        return au == du
-
-    # 至少一方没有独立 unit 字段：仅从 currency 中提取明确单位。
-    # 按长到短匹配，避免“百万元”被误识别为“元”。
-    # 不把裸“元”作为可推断单位，因为“美元/人民币元”等币种名称自身也含“元”。
-    known_units = ("百万元", "千万元", "十万元", "亿元", "万元", "千元")
-
-    def _effective_unit(explicit: str, currency: str) -> str:
-        if explicit:
-            return explicit
-        return next((unit for unit in known_units if unit in currency), "")
+    # 分别核验显式 unit 与 currency 中内嵌的单位。如果同一侧同时存在但
+    # 互相矛盾（如 currency=USD亿元、unit=百万元），必须阻止比较。
+    def _effective_unit(explicit: str, currency: str) -> tuple[str, bool]:
+        explicit_unit = _normalize_unit(explicit)
+        _, embedded_raw = _split_currency_and_embedded_unit(currency)
+        embedded_unit = _normalize_unit(embedded_raw)
+        if explicit_unit and embedded_unit and explicit_unit != embedded_unit:
+            return "", False
+        return explicit_unit or embedded_unit, True
 
     ac = (assumptions.get("currency") or "").strip()
     dc = (demo_data.get("currency") or "").strip()
-    effective_au = _effective_unit(au, ac)
-    effective_du = _effective_unit(du, dc)
-    return bool(effective_au and effective_du and effective_au == effective_du)
+    effective_au, assumption_unit_ok = _effective_unit(au, ac)
+    effective_du, demo_unit_ok = _effective_unit(du, dc)
+    return bool(
+        assumption_unit_ok
+        and demo_unit_ok
+        and effective_au
+        and effective_du
+        and effective_au == effective_du
+    )
 
 
 def _format_currency_unit(assumptions: dict[str, Any]) -> str:
